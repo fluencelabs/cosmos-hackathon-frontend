@@ -3,8 +3,6 @@ import "bootstrap/dist/css/bootstrap.min.css";
 let state = {};
 
 window.onload = function () {
-	console.log("hello   to1");
-
 	let list = document.getElementById("zoneList");
 
 	let coolZone = {
@@ -54,7 +52,7 @@ function startCheckEvent() {
     let someInfo = {
         name: nodeIpEl.value,
         nodesNumber: 34,
-        lastHeight: 49771,
+        lastHeight: 13,
         binaryLink: "#"
     };
 
@@ -82,10 +80,45 @@ function changeHeight(el, currentHeight) {
 	el.innerHTML = `Height: ${currentHeight}`;
 }
 
+function showError(el, btn) {
+    let infoDiv = el.parentElement.parentElement.getElementsByClassName("bg-white")[0];
+    infoDiv.innerHTML = "some error about";
+    btn.innerHTML = "Hide Error";
+}
+
+function hideError(el, btn) {
+    let infoDiv = el.parentElement.parentElement.getElementsByClassName("bg-white")[0];
+    infoDiv.innerHTML = "";
+    btn.innerHTML = "Show Error";
+}
+
+function errorAction(btn, el) {
+    showError(el, btn);
+}
+
+function unerrorAction(btn, el) {
+    hideError(el, btn);
+}
+
 function setError(el) {
 	console.log("ERROR!!!!!!!!!!!");
 	el.classList.add("progress-error");
-    el.parentElement.innerHTML += `<button type="button" class="btn btn-block btn-danger" style="width: 60%;">Get Error Info</button>`
+	let newBtn = document.createElement("button");
+	newBtn.type = "button";
+	newBtn.style.width = "60%";
+	newBtn.classList.add("btn", "btn-block", "btn-danger");
+	newBtn.innerHTML = "Get Error Info";
+	let swap = false;
+    newBtn.onclick = function() {
+        if (swap) {
+            unerrorAction(newBtn, el);
+            swap = false;
+        } else {
+            errorAction(newBtn, el);
+            swap = true;
+        }
+    };
+    el.parentElement.append(newBtn);
 }
 
 function zoneElement(id, info, status) {
@@ -112,6 +145,7 @@ function zoneElement(id, info, status) {
                         <div class="progress">
                             <div class="${barStatus}" role="progressbar" style="width: ${percent}%;" aria-valuenow="${percent}" aria-valuemin="0" aria-valuemax="100">Height: ${currentHeight}</div>
                         </div>
+                        <div class="bg-white"></div>
                     </div>
                 </div>`
 }
@@ -141,8 +175,6 @@ function startCheck(zoneId, info) {
 		let data = JSON.parse(event.data);
 		let el = document.getElementById(zoneId).getElementsByClassName("progress-bar")[0];
 		k++;
-		console.log(JSON.stringify(st));
-		console.log(JSON.stringify(data));
 		if (data.height) {
 			if (st.info.lastHeight < 1000 || k % 100 === 0) {
 				setHeightAndWidth(el, data.height, st.info.lastHeight);
