@@ -15,7 +15,7 @@ window.onload = function () {
 		status: "in-progress",
 		height: 3545
 	};
-	list.innerHTML += zoneElement("cool-zone", coolZone, coolStatus);
+	appendNewZone("cool-zone", coolZone, coolStatus);
 
 	let iris = {
 		name: "Iris",
@@ -26,7 +26,7 @@ window.onload = function () {
 	let irisStatus = {
 		status: "success"
 	};
-	list.innerHTML += zoneElement("iris", iris, irisStatus);
+	appendNewZone("iris", iris, irisStatus);
 
 	let nameService = {
 		name: "Name Service",
@@ -37,12 +37,12 @@ window.onload = function () {
 	let nameStatus = {
 		status: "error"
 	};
-	list.innerHTML += zoneElement("name service", nameService, nameStatus);
+	appendNewZone("name service", nameService, nameStatus);
 
 	let buttonEl = document.getElementById("start-check");
-	buttonEl.onclick = function() {
-	    startCheckEvent()
-    }
+	buttonEl.addEventListener("click", function() {
+        startCheckEvent()
+    });
 };
 
 function startCheckEvent() {
@@ -59,14 +59,23 @@ function startCheckEvent() {
     startCheck(someInfo.name, someInfo);
 }
 
-function appendNewZone(id, info) {
+function appendNewZone(id, info, status) {
+    state[id] = {
+        info: info,
+        status: status
+    };
 	let list = document.getElementById("zoneList");
-	let status = {
-		status: "in-progress",
-		height: 0
-	};
+	if (!status) {
+        status = {
+            status: "in-progress",
+            height: 0
+        };
+    }
 	let zoneInfo = zoneElement(id, info, status);
-	list.innerHTML = zoneInfo + list.innerHTML
+	list.innerHTML = zoneInfo + list.innerHTML;
+    if (status.status === "error") {
+        setError(id)
+    }
 }
 
 function setHeightAndWidth(el, currentHeight, lastHeight) {
@@ -80,45 +89,65 @@ function changeHeight(el, currentHeight) {
 	el.innerHTML = `Height: ${currentHeight}`;
 }
 
-function showError(el, btn) {
-    let infoDiv = el.parentElement.parentElement.getElementsByClassName("bg-white")[0];
+function getInfo(id) {
+    let el = document.getElementById(id);
+    return el.getElementsByClassName("bg-white")[0];
+}
+
+function showError(id, btn) {
+    let infoDiv = getInfo(id);
     infoDiv.innerHTML = "some error about";
     btn.innerHTML = "Hide Error";
 }
 
-function hideError(el, btn) {
-    let infoDiv = el.parentElement.parentElement.getElementsByClassName("bg-white")[0];
+function hideError(id, btn) {
+    let infoDiv = getInfo(id);
     infoDiv.innerHTML = "";
     btn.innerHTML = "Show Error";
 }
 
-function errorAction(btn, el) {
-    showError(el, btn);
+function errorAction(btn, id) {
+    showError(id, btn);
 }
 
-function unerrorAction(btn, el) {
-    hideError(el, btn);
+function unerrorAction(btn, id) {
+    hideError(id, btn);
 }
 
-function setError(el) {
-	console.log("ERROR!!!!!!!!!!!");
+function genErrorButton(id) {
+    let newBtn = document.createElement("button");
+    newBtn.type = "button";
+    newBtn.id = id + "-btn";
+    newBtn.style.width = "60%";
+    newBtn.classList.add("btn", "btn-block", "btn-danger");
+    newBtn.innerHTML = "Get Error Info";
+    return newBtn;
+}
+
+function setError(id) {
+    let el = getProgressBar(id);
+	console.log("ERROR!!!!!!!!!!! ");
 	el.classList.add("progress-error");
-	let newBtn = document.createElement("button");
-	newBtn.type = "button";
-	newBtn.style.width = "60%";
-	newBtn.classList.add("btn", "btn-block", "btn-danger");
-	newBtn.innerHTML = "Get Error Info";
-	let swap = false;
-    newBtn.onclick = function() {
-        if (swap) {
-            unerrorAction(newBtn, el);
-            swap = false;
+	let btn = genErrorButton(id);
+	state[id].swap = false;
+	state[id].errorButton = btn;
+	state[id].errorFunc = function(e) {
+        console.log("error button clicked = " + id);
+        if (state[id].swap) {
+            unerrorAction(btn, id);
+            state[id].swap = false;
         } else {
-            errorAction(newBtn, el);
-            swap = true;
+            errorAction(btn, id);
+            state[id].swap = true;
         }
     };
-    el.parentElement.append(newBtn);
+    el.parentElement.appendChild(btn);
+    // to avoid `onclick` erasure for some reasons
+    Object.keys(state).forEach(function(key) {
+        if (state[key].errorButton) {
+            document.getElementById(key).onclick = state[key].errorFunc
+        }
+    });
 }
 
 function zoneElement(id, info, status) {
@@ -138,19 +167,28 @@ function zoneElement(id, info, status) {
 		console.log("percent: " + percent);
 	}
 	console.log("hi " + id);
-	return `<div class="row border border-dark" id="${id}">
+
+    return `<div class="row border border-dark" id="${id}">
                     <div class="row"><div class="col-12">${info.name}, ${info.nodesNumber} nodes, ${info.lastHeight}</div></div>
                     <div class="row"><div class="col-12"><a href="${info.binaryLink}">Binary link</a></div></div>                   
                     <div class="col-12">
                         <div class="progress">
-                            <div class="${barStatus}" role="progressbar" style="width: ${percent}%;" aria-valuenow="${percent}" aria-valuemin="0" aria-valuemax="100">Height: ${currentHeight}</div>
+                            <div class="${barStatus}" role="progressbar" style="width: ${percent}%;" aria-valuenow="${percent}" aria-valuemin="0" aria-valuemax="100">Height: ${currentHeight}</div>                        
                         </div>
                         <div class="bg-white"></div>
                     </div>
-                </div>`
+                </div>`;
+}
+
+function getProgressBar(id) {
+    return document.getElementById(id).getElementsByClassName("progress-bar")[0];
 }
 
 function startCheck(zoneId, info) {
+
+    if (state[zoneId]) {
+        return;
+    }
 
 	var xmlHttp = new XMLHttpRequest();
 	xmlHttp.open( "GET", "http://localhost:8090/create/" + zoneId, false ); // false for synchronous request
@@ -160,12 +198,11 @@ function startCheck(zoneId, info) {
 
 	socket.onopen = function(e) {
 
+        state[zoneId] = {
+            info: info
+        };
 		appendNewZone(zoneId, info);
 		console.log("Websocket was opened: " + JSON.stringify(e));
-
-		state[zoneId] = {
-			info: info
-		}
 	};
 
 	let k = 0;
@@ -173,7 +210,7 @@ function startCheck(zoneId, info) {
 	socket.onmessage = function(event) {
 		let st = state[zoneId];
 		let data = JSON.parse(event.data);
-		let el = document.getElementById(zoneId).getElementsByClassName("progress-bar")[0];
+		let el = getProgressBar(zoneId);
 		k++;
 		if (data.height) {
 			if (st.info.lastHeight < 1000 || k % 100 === 0) {
@@ -182,7 +219,7 @@ function startCheck(zoneId, info) {
 				changeHeight(el, data.height)
 			}
 		} else {
-			setError(el);
+			setError(zoneId);
 			socket.close()
 		}
 	};
