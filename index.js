@@ -1,7 +1,9 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 
+let state = {};
+
 window.onload = function () {
-	console.log("hello  to1");
+	console.log("hello   to1");
 
 	let list = document.getElementById("zoneList");
 
@@ -40,12 +42,23 @@ window.onload = function () {
 	list.innerHTML += zoneElement("name service", nameService, nameStatus);
 
 	let buttonEl = document.getElementById("start-check");
-	buttonEl.onclick = startCheckEvent()
+	buttonEl.onclick = function() {
+	    startCheckEvent()
+    }
 };
 
 function startCheckEvent() {
 	let nodeIpEl = document.getElementById("node-ip");
 	let binaryUrlEl = document.getElementById("binary-url");
+
+    let someInfo = {
+        name: nodeIpEl.value,
+        nodesNumber: 34,
+        lastHeight: 49771,
+        binaryLink: "#"
+    };
+
+    startCheck(someInfo.name, someInfo);
 }
 
 function appendNewZone(id, info) {
@@ -55,7 +68,7 @@ function appendNewZone(id, info) {
 		height: 0
 	};
 	let zoneInfo = zoneElement(id, info, status);
-	list.innerHTML += zoneInfo
+	list.innerHTML = zoneInfo + list.innerHTML
 }
 
 function setHeightAndWidth(el, currentHeight, lastHeight) {
@@ -71,7 +84,8 @@ function changeHeight(el, currentHeight) {
 
 function setError(el) {
 	console.log("ERROR!!!!!!!!!!!");
-	el.classList.add("progress-error")
+	el.classList.add("progress-error");
+    el.parentElement.innerHTML += `<button type="button" class="btn btn-block btn-danger" style="width: 60%;">Get Error Info</button>`
 }
 
 function zoneElement(id, info, status) {
@@ -101,18 +115,6 @@ function zoneElement(id, info, status) {
                     </div>
                 </div>`
 }
-
-let state = {};
-
-
-let someInfo = {
-	name: "new-zone",
-	nodesNumber: 34,
-	lastHeight: 13,
-	binaryLink: "#"
-};
-
-startCheck(someInfo.name, someInfo);
 
 function startCheck(zoneId, info) {
 
