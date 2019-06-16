@@ -46,17 +46,21 @@ window.onload = function () {
 };
 
 function startCheckEvent() {
-	let nodeIpEl = document.getElementById("node-ip");
-	let binaryUrlEl = document.getElementById("binary-url");
+	let nodeIpEl = document.getElementById("node-ip").value;
+    let portEl = document.getElementById("node-port").value;
+    let binaryUrlEl = document.getElementById("binary-url").value;
+	let nameEl = document.getElementById("node-name").value;
 
     let someInfo = {
-        name: nodeIpEl.value,
+        name: nameEl,
         nodesNumber: 34,
         lastHeight: 13,
         binaryLink: "#"
     };
 
-    startCheck(someInfo.name, someInfo);
+    let createUrl = `http://localhost:8090/create/${nameEl}/${nodeIpEl}/${portEl}/${binaryUrlEl}`;
+
+    startCheck(createUrl, someInfo.name, someInfo);
 }
 
 function appendNewZone(id, info, status) {
@@ -80,7 +84,6 @@ function appendNewZone(id, info, status) {
 
 function setHeightAndWidth(el, currentHeight, lastHeight) {
 	let percent = currentHeight / lastHeight * 100;
-	console.log("hey = " + percent);
 	el.style.width = `${percent}%`;
 	el.innerHTML = `Height: ${currentHeight}`;
 }
@@ -184,51 +187,49 @@ function getProgressBar(id) {
     return document.getElementById(id).getElementsByClassName("progress-bar")[0];
 }
 
-function startCheck(zoneId, info) {
+function startCheck(createUrl, zoneId, info) {
 
     if (state[zoneId]) {
         return;
     }
 
-	var xmlHttp = new XMLHttpRequest();
-	xmlHttp.open( "GET", "http://localhost:8090/create/" + zoneId, false ); // false for synchronous request
-	xmlHttp.send( null );
+	fetch(createUrl).then((sa) => {
+        let socket = new WebSocket("ws://127.0.0.1:8090/websocket/" + zoneId);
 
-	let socket = new WebSocket("ws://127.0.0.1:8090/websocket/start/file/" + zoneId);
+        socket.onopen = function(e) {
 
-	socket.onopen = function(e) {
-
-        state[zoneId] = {
-            info: info
+            console.log(e);
+            state[zoneId] = {
+                info: info
+            };
+            appendNewZone(zoneId, info);
         };
-		appendNewZone(zoneId, info);
-		console.log("Websocket was opened: " + JSON.stringify(e));
-	};
 
-	let k = 0;
+        let k = 0;
 
-	socket.onmessage = function(event) {
-		let st = state[zoneId];
-		let data = JSON.parse(event.data);
-		let el = getProgressBar(zoneId);
-		k++;
-		if (data.height) {
-			if (st.info.lastHeight < 1000 || k % 100 === 0) {
-				setHeightAndWidth(el, data.height, st.info.lastHeight);
-			} else {
-				changeHeight(el, data.height)
-			}
-		} else {
-			setError(zoneId);
-			socket.close()
-		}
-	};
+        socket.onmessage = function(event) {
+            let st = state[zoneId];
+            let data = JSON.parse(event.data);
+            let el = getProgressBar(zoneId);
+            k++;
+            if (data.correct) {
+                if (st.info.lastHeight < 1000 || k % 100 === 0) {
+                    setHeightAndWidth(el, data.height, st.info.lastHeight);
+                } else {
+                    changeHeight(el, data.height)
+                }
+            } else {
+                setError(zoneId);
+                socket.close()
+            }
+        };
 
-	socket.onclose = function(event) {
-		console.log("Websocket was closed. Cause: " + JSON.stringify(event))
-	};
+        socket.onclose = function(event) {
+            console.log("Websocket was closed. Cause: " + JSON.stringify(event))
+        };
 
-	socket.onerror = function(error) {
-		console.log("Error: " + JSON.stringify(error))
-	};
+        socket.onerror = function(error) {
+            console.log("Error: " + JSON.stringify(error))
+        };
+    });
 }
