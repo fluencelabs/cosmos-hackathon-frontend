@@ -314,7 +314,7 @@ function startCheck(params, zoneId, info) {
                 }
             } else {
                 setHeightAndWidth(el, st.info.lastHeight, st.info.lastHeight);
-                changeHeight(el, data.height);
+                changeHeight(el, data.height - 1);
                 let erroredHeight = state[zoneId].currentHeight;
                 setError(zoneId, erroredHeight - 1);
                 socket.close()
