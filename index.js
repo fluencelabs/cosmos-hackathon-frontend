@@ -19,7 +19,7 @@ window.onload = function () {
 		status: "in-progress",
 		height: 3545
 	};
-	appendNewZone("cool-zone", coolZone, coolStatus);
+	// appendNewZone("cool-zone", coolZone, coolStatus);
 
 	let iris = {
 		name: "Iris",
@@ -30,7 +30,7 @@ window.onload = function () {
 	let irisStatus = {
 		status: "success"
 	};
-	appendNewZone("iris", iris, irisStatus);
+	// appendNewZone("iris", iris, irisStatus);
 
 	let badZone = {
 		name: "Bad Zone",
@@ -54,7 +54,7 @@ window.onload = function () {
       ]
     }`);
 
-	appendNewZone(bzId, badZone, nameStatus);
+	// appendNewZone(bzId, badZone, nameStatus);
 
 	let buttonEl = document.getElementById("start-check");
 	buttonEl.addEventListener("click", function() {
@@ -254,9 +254,14 @@ function zoneElement(id, info, status) {
 		percent = currentHeight / info.lastHeight * 100;
 	}
 
+	let valNumber = 4;
+	if (id === "nameservice") {
+	    valNumber = 1;
+    }
+
     return `<div class="row border border-dark p-2" id="${id}">
                     <div class="col-9 list-info">
-                        <p>Name: ${info.name}</p><p>Validator Number: 4</p><p>Consensus Height: ${info.lastHeight}</p><p>Binary in IPFS: ${info.binaryLink}</p>
+                        <p>Name: ${info.name}</p><p>Validator Number: ${valNumber}</p><p>Consensus Height: ${info.lastHeight}</p><p>Binary in IPFS: ${info.binaryLink}</p>
                     </div>
                     <div class="text-right col-3"><button type="button" class="btn btn-info btn-block claim-btn pull-right" style="display: none;">Send Fraud Proof</button></div>
                     <div class="col-12">
