@@ -9,7 +9,8 @@ module.exports = {
     },
     devServer: {
         contentBase: './bundle',
-        hot: true
+        hot: false,
+        disableHostCheck: true
     },
     mode: "development",
     module: {
