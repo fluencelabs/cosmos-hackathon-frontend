@@ -19,16 +19,26 @@
         .progress-error {
             background-color: #fdd8d8;
         }
+
+        .list-info p {
+            margin-bottom: 0;
+        }
     </style>
     <body> 
         <section class="container">
             <div class="m-5"><h1>Cosmic Salmon. Hook A Fish</h1></div>
-            <div class="input-group border-primary m-5">
-                <input type="text" class="form-control" placeholder="Node IP" id="node-ip" value="207.154.210.117">
-                <input type="text" class="form-control" placeholder="Node Port" id="node-port" value="26657">
-                <input type="text" class="form-control" placeholder="Binary Source" id="binary-url" value="QmQ69JoPDaKFpPSbWvvUGRGG5E83u6nTP2hRegmCoa6aW5">
-                <input type="text" class="form-control" placeholder="Name" id="node-name" value="name service">
-                <button type="button" class="btn btn-outline-secondary" id="start-check">Start Check</button>
+            <div class="m-1 bg-light">
+                <div class="input-group border-primary">
+                    <input type="text" class="form-control m-2" placeholder="Node IP" id="node-ip"
+                           value="207.154.210.117">
+                    <input type="text" class="form-control m-2" placeholder="Node Port" id="node-port" value="26657">
+                </div>
+                <div class="input-group border-primary">
+                    <input type="text" class="form-control m-2" placeholder="Binary Source" id="binary-url"
+                           value="QmQ69JoPDaKFpPSbWvvUGRGG5E83u6nTP2hRegmCoa6aW5">
+                    <input type="text" class="form-control m-2" placeholder="Name" id="node-name" value="name-service">
+            </div>
+                <button type="button" class="btn btn-outline-secondary m-3" id="start-check">Start Check</button>
             </div>
 
 

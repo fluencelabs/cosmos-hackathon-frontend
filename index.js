@@ -2,6 +2,8 @@ import "bootstrap/dist/css/bootstrap.min.css";
 
 let state = {};
 
+let url = "http://localhost:8090/";
+
 window.onload = function () {
 	let list = document.getElementById("zoneList");
 
@@ -28,8 +30,8 @@ window.onload = function () {
 	};
 	appendNewZone("iris", iris, irisStatus);
 
-	let nameService = {
-		name: "Name Service",
+	let badZone = {
+		name: "Bad Zone",
 		nodesNumber: 4,
 		lastHeight: 2566,
 		binaryLink: "#"
@@ -37,7 +39,21 @@ window.onload = function () {
 	let nameStatus = {
 		status: "error"
 	};
-	appendNewZone("name service", nameService, nameStatus);
+	let bzId = "bad-zone";
+    state[bzId] = {};
+	state[bzId].errorInfo = JSON.parse(`{
+      "height": "10",
+      "txs": null,
+      "signatures": [
+        {
+          "validator_address": "7869301611744D2F6A5578EB001DB18BCC0AC705",
+          "signature": "ruuvN8mPiKXniLc0JkblK4ol1oUHx3RuLDykik/DN8aiWXnWzPOPiLZrOLE0XbranEJpdErGalZnzShblUixAw=="
+        }
+      ]
+    }`);
+	console.log("bzid === " + bzId);
+	console.log("sdfsfsdf === " + state[bzId].errorInfo);
+	appendNewZone(bzId, badZone, nameStatus);
 
 	let buttonEl = document.getElementById("start-check");
 	buttonEl.addEventListener("click", function() {
@@ -46,28 +62,40 @@ window.onload = function () {
 };
 
 function startCheckEvent() {
-	let nodeIpEl = document.getElementById("node-ip").value;
-    let portEl = document.getElementById("node-port").value;
-    let binaryUrlEl = document.getElementById("binary-url").value;
-	let nameEl = document.getElementById("node-name").value;
+	let nodeIp = document.getElementById("node-ip").value;
+    let port = document.getElementById("node-port").value;
+    let binaryUrl = document.getElementById("binary-url").value;
+	let name = document.getElementById("node-name").value;
+
+	let params = {
+	    nodeIp: nodeIp,
+        port: port,
+        binaryUrl: binaryUrl,
+        name: name
+    };
 
     let someInfo = {
-        name: nameEl,
+        name: name,
         nodesNumber: 34,
-        lastHeight: 13,
+        lastHeight: 48,
         binaryLink: "#"
     };
 
-    let createUrl = `http://localhost:8090/create/${nameEl}/${nodeIpEl}/${portEl}/${binaryUrlEl}`;
 
-    startCheck(createUrl, someInfo.name, someInfo);
+
+    startCheck(params, someInfo.name, someInfo);
 }
 
 function appendNewZone(id, info, status) {
-    state[id] = {
-        info: info,
-        status: status
-    };
+    if (state[id]) {
+        state[id].info = info;
+        state[id].status = status;
+    } else {
+        state[id] = {
+            info: info,
+            status: status
+        };
+    }
 	let list = document.getElementById("zoneList");
 	if (!status) {
         status = {
@@ -78,7 +106,7 @@ function appendNewZone(id, info, status) {
 	let zoneInfo = zoneElement(id, info, status);
 	list.innerHTML = zoneInfo + list.innerHTML;
     if (status.status === "error") {
-        setError(id)
+        setError(id, status.height)
     }
 }
 
@@ -99,7 +127,26 @@ function getInfo(id) {
 
 function showError(id, btn) {
     let infoDiv = getInfo(id);
-    infoDiv.innerHTML = "some error about";
+    let jsonInfo;
+    console.log("ID === " + state[id].errorInfo);
+    if (state[id].errorInfo) {
+        jsonInfo = state[id].errorInfo;
+    } else {
+        let block = state[id].block;
+        let signatures = block.last_commit.precommits.map((p) => {
+            return {
+                validator_address: p.validator_address,
+                signature: p.signature
+            }
+        });
+        jsonInfo = {
+            height: block.header.height,
+            txs: block.data.txs,
+            signatures: signatures
+        };
+    }
+
+    infoDiv.innerHTML = `<pre>${JSON.stringify(jsonInfo, null, 2)}</pre>`;
     btn.innerHTML = "Hide Error";
 }
 
@@ -127,9 +174,15 @@ function genErrorButton(id) {
     return newBtn;
 }
 
-function setError(id) {
+function setError(id, erroredHeight) {
     let el = getProgressBar(id);
-	console.log("ERROR!!!!!!!!!!! ");
+	console.log("ERROR!!!!!!!!!!! " + erroredHeight);
+	getBlock(id, erroredHeight).then((resp) => {
+        return resp.text()
+    }).then((r) => {
+        console.log(JSON.parse(r));
+        state[id].block = JSON.parse(r).result.block;
+    });
 	el.classList.add("progress-error");
 	let btn = genErrorButton(id);
 	state[id].swap = false;
@@ -171,9 +224,10 @@ function zoneElement(id, info, status) {
 	}
 	console.log("hi " + id);
 
-    return `<div class="row border border-dark" id="${id}">
-                    <div class="row"><div class="col-12">${info.name}, ${info.nodesNumber} nodes, ${info.lastHeight}</div></div>
-                    <div class="row"><div class="col-12"><a href="${info.binaryLink}">Binary link</a></div></div>                   
+    return `<div class="row border border-dark p-2" id="${id}">
+                    <div class="col-12 list-info">
+                        <p>Name: ${info.name}</p><p>Validator Number: ${info.nodesNumber}</p><p>Last Height: ${info.lastHeight}</p><p><a href="${info.binaryLink}">Binary link</a></p>
+                    </div>                                       
                     <div class="col-12">
                         <div class="progress">
                             <div class="${barStatus}" role="progressbar" style="width: ${percent}%;" aria-valuenow="${percent}" aria-valuemin="0" aria-valuemax="100">Height: ${currentHeight}</div>                        
@@ -187,14 +241,14 @@ function getProgressBar(id) {
     return document.getElementById(id).getElementsByClassName("progress-bar")[0];
 }
 
-function startCheck(createUrl, zoneId, info) {
+function startCheck(params, zoneId, info) {
 
     if (state[zoneId]) {
         return;
     }
 
-	fetch(createUrl).then((sa) => {
-        let socket = new WebSocket("ws://127.0.0.1:8090/websocket/" + zoneId);
+	createCheck(params).then((sa) => {
+        let socket = new WebSocket("ws://127.0.0.1:8090/file");
 
         socket.onopen = function(e) {
 
@@ -210,6 +264,10 @@ function startCheck(createUrl, zoneId, info) {
         socket.onmessage = function(event) {
             let st = state[zoneId];
             let data = JSON.parse(event.data);
+            if (data.height) {
+                console.log("current height = " + data.height);
+                state[zoneId].currentHeight = data.height
+            }
             let el = getProgressBar(zoneId);
             k++;
             if (data.correct) {
@@ -219,7 +277,8 @@ function startCheck(createUrl, zoneId, info) {
                     changeHeight(el, data.height)
                 }
             } else {
-                setError(zoneId);
+                let erroredHeight = state[zoneId].currentHeight;
+                setError(zoneId, erroredHeight);
                 socket.close()
             }
         };
@@ -232,4 +291,18 @@ function startCheck(createUrl, zoneId, info) {
             console.log("Error: " + JSON.stringify(error))
         };
     });
+}
+
+async function getApps(id, height) {
+    return fetch(`${url}/apps`)
+}
+
+async function getBlock(id, height) {
+    return fetch(`${url}/block/${id}/${height}`)
+}
+
+async function createCheck(params) {
+    let createUrl = `${url}/create/${params.name}/${params.nodeIp}/${params.port}/${params.binaryUrl}`;
+    fetch(createUrl);
+    return Promise.resolve()
 }
