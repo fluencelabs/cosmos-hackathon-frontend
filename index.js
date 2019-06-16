@@ -2,9 +2,11 @@ import "bootstrap/dist/css/bootstrap.min.css";
 
 let state = {};
 
-let url = "http://localhost:8090/";
+let url = "http://salmon.fluence.one:8080/";
+let wsUrl = "ws://salmon.fluence.one:8080/";
 
 window.onload = function () {
+    getApps();
 	let list = document.getElementById("zoneList");
 
 	let coolZone = {
@@ -51,14 +53,27 @@ window.onload = function () {
         }
       ]
     }`);
-	console.log("bzid === " + bzId);
-	console.log("sdfsfsdf === " + state[bzId].errorInfo);
+
 	appendNewZone(bzId, badZone, nameStatus);
 
 	let buttonEl = document.getElementById("start-check");
 	buttonEl.addEventListener("click", function() {
         startCheckEvent()
     });
+
+	document.getElementById("name-service-hlp").onclick = function() {
+        document.getElementById("node-ip").value = "207.154.210.117";
+        document.getElementById("node-port").value = "26657";
+        document.getElementById("binary-url").value = "QmQ69JoPDaKFpPSbWvvUGRGG5E83u6nTP2hRegmCoa6aW5";
+        document.getElementById("node-name").value = "nameservice";
+    };
+
+    document.getElementById("commercio-hlp").onclick = function() {
+        document.getElementById("node-ip").value = "188.166.71.251 ";
+        document.getElementById("node-port").value = "26657";
+        document.getElementById("binary-url").value = "QmepV645qHM9XR97KiK7Bvd2jjK3MiKTGbq8cYm7izRyQK";
+        document.getElementById("node-name").value = "commercionetwork";
+    };
 };
 
 function startCheckEvent() {
@@ -74,13 +89,27 @@ function startCheckEvent() {
         name: name
     };
 
-    let someInfo = {
-        name: name,
-        nodesNumber: 34,
-        lastHeight: 48,
-        binaryLink: "#"
-    };
+	let app = state.apps.find((r) => {
+	    return r.name === name
+    });
 
+    let someInfo;
+	if (app) {
+        someInfo = {
+            name: name,
+            nodesNumber: 13,
+            lastHeight: app.consensusHeight,
+            binaryLink: app.binaryHash
+        };
+    } else {
+	    // mock
+        someInfo = {
+            name: name,
+            nodesNumber: 34,
+            lastHeight: 48,
+            binaryLink: "#"
+        };
+    }
 
 
     startCheck(params, someInfo.name, someInfo);
@@ -122,7 +151,7 @@ function changeHeight(el, currentHeight) {
 
 function getInfo(id) {
     let el = document.getElementById(id);
-    return el.getElementsByClassName("bg-white")[0];
+    return el.getElementsByClassName("error-info")[0];
 }
 
 function showError(id, btn) {
@@ -168,7 +197,7 @@ function genErrorButton(id) {
     let newBtn = document.createElement("button");
     newBtn.type = "button";
     newBtn.id = id + "-btn";
-    newBtn.style.width = "60%";
+    newBtn.style.width = "20%";
     newBtn.classList.add("btn", "btn-block", "btn-danger");
     newBtn.innerHTML = "Get Error Info";
     return newBtn;
@@ -184,6 +213,10 @@ function setError(id, erroredHeight) {
         state[id].block = JSON.parse(r).result.block;
     });
 	el.classList.add("progress-error");
+
+	let claimBtn = document.getElementById(id).getElementsByClassName("claim-btn")[0];
+	claimBtn.style.display = "block";
+
 	let btn = genErrorButton(id);
 	state[id].swap = false;
 	state[id].errorButton = btn;
@@ -208,6 +241,7 @@ function setError(id, erroredHeight) {
 
 function zoneElement(id, info, status) {
 	let barStatus;
+
 	let percent = "100";
 	let currentHeight = info.lastHeight;
 	if (status.status === "success") {
@@ -218,21 +252,19 @@ function zoneElement(id, info, status) {
 		barStatus = "progress-bar";
 		currentHeight = status.height;
 		percent = currentHeight / info.lastHeight * 100;
-		console.log("last height: " + info.lastHeight);
-		console.log("cur height: " + currentHeight);
-		console.log("percent: " + percent);
 	}
-	console.log("hi " + id);
 
     return `<div class="row border border-dark p-2" id="${id}">
-                    <div class="col-12 list-info">
-                        <p>Name: ${info.name}</p><p>Validator Number: ${info.nodesNumber}</p><p>Last Height: ${info.lastHeight}</p><p><a href="${info.binaryLink}">Binary link</a></p>
-                    </div>                                       
+                    <div class="col-9 list-info">
+                        <p>Name: ${info.name}</p><p>Validator Number: 4</p><p>Consensus Height: ${info.lastHeight}</p><p>Binary in IPFS: ${info.binaryLink}</p>
+                    </div>
+                    <div class="text-right col-3"><button type="button" class="btn btn-info btn-block claim-btn pull-right" style="display: none;">Send Fraud Proof</button></div>
                     <div class="col-12">
+                    
                         <div class="progress">
                             <div class="${barStatus}" role="progressbar" style="width: ${percent}%;" aria-valuenow="${percent}" aria-valuemin="0" aria-valuemax="100">Height: ${currentHeight}</div>                        
                         </div>
-                        <div class="bg-white"></div>
+                        <div class="bg-white error-info"></div>
                     </div>
                 </div>`;
 }
@@ -248,7 +280,7 @@ function startCheck(params, zoneId, info) {
     }
 
 	createCheck(params).then((sa) => {
-        let socket = new WebSocket("ws://127.0.0.1:8090/file");
+        let socket = new WebSocket(wsUrl + "websocket/" + params.name);
 
         socket.onopen = function(e) {
 
@@ -265,7 +297,6 @@ function startCheck(params, zoneId, info) {
             let st = state[zoneId];
             let data = JSON.parse(event.data);
             if (data.height) {
-                console.log("current height = " + data.height);
                 state[zoneId].currentHeight = data.height
             }
             let el = getProgressBar(zoneId);
@@ -277,8 +308,10 @@ function startCheck(params, zoneId, info) {
                     changeHeight(el, data.height)
                 }
             } else {
+                setHeightAndWidth(el, st.info.lastHeight, st.info.lastHeight);
+                changeHeight(el, data.height);
                 let erroredHeight = state[zoneId].currentHeight;
-                setError(zoneId, erroredHeight);
+                setError(zoneId, erroredHeight - 1);
                 socket.close()
             }
         };
@@ -293,16 +326,20 @@ function startCheck(params, zoneId, info) {
     });
 }
 
-async function getApps(id, height) {
-    return fetch(`${url}/apps`)
+async function getApps() {
+    fetch(`${url}apps`).then((r) => {
+        return r.text()
+    }).then((r) => {
+        state.apps = JSON.parse(r)
+    })
 }
 
 async function getBlock(id, height) {
-    return fetch(`${url}/block/${id}/${height}`)
+    return fetch(`${url}block/${id}/${height}`)
 }
 
 async function createCheck(params) {
-    let createUrl = `${url}/create/${params.name}/${params.nodeIp}/${params.port}/${params.binaryUrl}`;
+    let createUrl = `${url}create/${params.name}/${params.nodeIp}/${params.port}/${params.binaryUrl}`;
     fetch(createUrl);
     return Promise.resolve()
 }
