@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "webpack-dev-server"
+    "start": "webpack-dev-server",
+    "start:prod": "webpack-dev-server --host 0.0.0.0 --port 80"
   },
   "files": [
     "index.html"
